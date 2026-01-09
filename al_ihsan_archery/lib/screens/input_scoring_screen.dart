@@ -79,12 +79,14 @@ class _InputScoringScreenState extends State<InputScoringScreen> {
     }
   }
 
-  void _finishTraining() {
-    TrainingData().saveCurrentSession();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const ArcherScoringScreen()),
-    );
+  void _finishTraining() async {
+    await TrainingData().saveCurrentSession();
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ArcherScoringScreen()),
+      );
+    }
   }
 
   int _getCurrentTotal() {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard_non_member.dart';
+import '../utils/user_data.dart';
+import 'package:intl/intl.dart';
 
 enum VerificationStatus {
   pending,
@@ -161,10 +163,29 @@ class _VerificationStatusScreenState extends State<VerificationStatusScreen> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               setState(() {
                                 _status = VerificationStatus.approved;
                               });
+                              
+                              // Activate membership
+                              final userData = UserData();
+                              userData.isMember = true;
+                              userData.ktaStatus = 'approved';
+                              
+                              // Generate membership number (format: AIA-YYYY-XXXX)
+                              final now = DateTime.now();
+                              final random = now.millisecondsSinceEpoch % 10000;
+                              userData.membershipNumber = 'AIA-${now.year}-${random.toString().padLeft(4, '0')}';
+                              
+                              // Set validity period (2 years from now)
+                              final validFrom = now;
+                              final validUntil = DateTime(now.year + 2, now.month, now.day);
+                              userData.membershipValidFrom = DateFormat('dd/MM/yyyy').format(validFrom);
+                              userData.membershipValidUntil = DateFormat('dd/MM/yyyy').format(validUntil);
+                              
+                              // Save to SharedPreferences
+                              await userData.saveData();
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF10B982),

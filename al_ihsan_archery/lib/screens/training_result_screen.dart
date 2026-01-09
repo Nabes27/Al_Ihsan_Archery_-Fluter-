@@ -9,22 +9,6 @@ class TrainingResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // For single player, use first player's data
-    final playerName = session.playerNames.first;
-    final totalScore = session.getTotalScore(playerName);
-    final avgScore = session.getAverageScore(playerName);
-    final totalArrows = session.numberOfRounds * session.arrowsPerRound;
-    
-    // Calculate accuracy (percentage of arrows that hit target, not miss)
-    int hitCount = 0;
-    for (int round = 0; round < session.numberOfRounds; round++) {
-      final roundScores = session.scores[playerName]?[round] ?? [];
-      for (var score in roundScores) {
-        if (score != 'M') hitCount++;
-      }
-    }
-    final accuracy = (hitCount / totalArrows) * 100;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       appBar: AppBar(
@@ -48,7 +32,7 @@ class TrainingResultScreen extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Purple Header
+            // Green Header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 40),
@@ -98,75 +82,114 @@ class TrainingResultScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            // Stats Grid
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 1.2,
-                children: [
-                  _buildStatCard(
-                    icon: Icons.star,
-                    iconColor: Colors.orange,
-                    value: totalScore.toString(),
-                    label: 'Total Score',
-                    valueColor: Colors.orange,
-                  ),
-                  _buildStatCard(
-                    icon: Icons.trending_up,
-                    iconColor: Colors.blue,
-                    value: avgScore.toStringAsFixed(2),
-                    label: 'Average',
-                    valueColor: Colors.blue,
-                  ),
-                  _buildStatCard(
-                    icon: Icons.adjust,
-                    iconColor: Colors.green,
-                    value: '${accuracy.toStringAsFixed(1)}%',
-                    label: 'Accuracy',
-                    valueColor: Colors.green,
-                  ),
-                  _buildStatCard(
-                    icon: Icons.arrow_forward,
-                    iconColor: Colors.purple,
-                    value: totalArrows.toString(),
-                    label: 'Arrows',
-                    valueColor: Colors.purple,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Round Details
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Round Details',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Round Cards
-                  ...List.generate(session.numberOfRounds, (roundIndex) {
-                    return _buildRoundCard(roundIndex, playerName);
-                  }),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
+            // Player Results - Loop untuk semua player
+            ...session.playerNames.map((playerName) {
+              return _buildPlayerStats(playerName);
+            }).toList(),
+            const SizedBox(height: 20),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPlayerStats(String playerName) {
+    final totalScore = session.getTotalScore(playerName);
+    final avgScore = session.getAverageScore(playerName);
+    final totalArrows = session.numberOfRounds * session.arrowsPerRound;
+    
+    // Calculate accuracy
+    int hitCount = 0;
+    for (int round = 0; round < session.numberOfRounds; round++) {
+      final roundScores = session.scores[playerName]?[round] ?? [];
+      for (var score in roundScores) {
+        if (score != 'M') hitCount++;
+      }
+    }
+    final accuracy = (hitCount / totalArrows) * 100;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (session.numberOfPlayers > 1)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              playerName,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF10B982),
+              ),
+            ),
+          ),
+        if (session.numberOfPlayers > 1) const SizedBox(height: 12),
+        // Stats Grid
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 1.0,
+            children: [
+              _buildStatCard(
+                icon: Icons.star,
+                iconColor: Colors.orange,
+                value: totalScore.toString(),
+                label: 'Total Score',
+                valueColor: Colors.orange,
+              ),
+              _buildStatCard(
+                icon: Icons.trending_up,
+                iconColor: Colors.blue,
+                value: avgScore.toStringAsFixed(2),
+                label: 'Average',
+                valueColor: Colors.blue,
+              ),
+              _buildStatCard(
+                icon: Icons.adjust,
+                iconColor: Colors.green,
+                value: '${accuracy.toStringAsFixed(1)}%',
+                label: 'Accuracy',
+                valueColor: Colors.green,
+              ),
+              _buildStatCard(
+                icon: Icons.arrow_forward,
+                iconColor: Colors.purple,
+                value: totalArrows.toString(),
+                label: 'Arrows',
+                valueColor: Colors.purple,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Round Details
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Round Details',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Round Cards
+              ...List.generate(session.numberOfRounds, (roundIndex) {
+                return _buildRoundCard(roundIndex, playerName);
+              }),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -178,7 +201,7 @@ class TrainingResultScreen extends StatelessWidget {
     required Color valueColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -193,28 +216,31 @@ class TrainingResultScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 32, color: iconColor),
-          const SizedBox(height: 8),
+          Icon(icon, size: 30, color: iconColor),
+          const SizedBox(height: 10),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               value,
               style: TextStyle(
-                fontSize: 26,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: valueColor,
               ),
+              maxLines: 1,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
               label,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: Colors.grey,
               ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
             ),
           ),
         ],

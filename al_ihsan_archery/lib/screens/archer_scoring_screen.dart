@@ -15,9 +15,31 @@ class ArcherScoringScreen extends StatefulWidget {
 }
 
 class _ArcherScoringScreenState extends State<ArcherScoringScreen> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await TrainingData().loadData();
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final sessions = TrainingData().getCompletedSessions();
+
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFE8F5E9),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: const Color(0xFFE8F5E9),
@@ -216,8 +238,10 @@ class _ArcherScoringScreenState extends State<ArcherScoringScreen> {
                               color: const Color(0xFFE8F5E9),
                               borderRadius: BorderRadius.circular(4),
                             ),
+                            constraints: const BoxConstraints(maxWidth: 100),
                             child: Text(
                               playerName,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -226,12 +250,15 @@ class _ArcherScoringScreenState extends State<ArcherScoringScreen> {
                             ),
                           ),
                         if (session.numberOfPlayers > 1) const SizedBox(width: 8),
-                        Text(
-                          'Score: $totalScore • Avg: ${avgScore.toStringAsFixed(1)}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF10B982),
+                        Flexible(
+                          child: Text(
+                            'Score: $totalScore • Avg: ${avgScore.toStringAsFixed(1)}',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF10B982),
+                            ),
                           ),
                         ),
                       ],
@@ -296,17 +323,18 @@ class _ArcherScoringScreenState extends State<ArcherScoringScreen> {
             child: const Text('Batal'),
           ),
           TextButton(
-            onPressed: () {
-              setState(() {
-                TrainingData().sessions.remove(session);
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Training berhasil dihapus'),
-                  backgroundColor: Color(0xFF10B982),
-                ),
-              );
+            onPressed: () async {
+              await TrainingData().removeSession(session);
+              setState(() {});
+              if (mounted) {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Training berhasil dihapus'),
+                    backgroundColor: Color(0xFF10B982),
+                  ),
+                );
+              }
             },
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),

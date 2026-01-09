@@ -3,12 +3,46 @@ import 'profile_screen.dart';
 import 'upload_kta_screen.dart';
 import 'archer_scoring_screen.dart';
 import 'setup_training_screen.dart';
+import 'kta_card_screen.dart';
+import 'Mamber/pembayaran_screen.dart';
+import '../utils/user_data.dart';
 
-class DashboardNonMember extends StatelessWidget {
+class DashboardNonMember extends StatefulWidget {
   const DashboardNonMember({super.key});
 
   @override
+  State<DashboardNonMember> createState() => _DashboardNonMemberState();
+}
+
+class _DashboardNonMemberState extends State<DashboardNonMember> {
+  bool _isLoading = true;
+  bool _isMember = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    await UserData().loadData();
+    setState(() {
+      _isMember = UserData().isMember;
+      _isLoading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF10B982),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF3F4F6),
       body: SafeArea(
@@ -70,8 +104,9 @@ class DashboardNonMember extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Hero Card with Recommendation Badge
-                Stack(
+                // Hero Card with Recommendation Badge (only show if not member)
+                if (!_isMember)
+                  Stack(
                   children: [
                     Container(
                       width: double.infinity,
@@ -173,7 +208,7 @@ class DashboardNonMember extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
+                if (!_isMember) const SizedBox(height: 24),
                 // Menu Utama
                 const Text(
                   'Menu Utama',
@@ -197,9 +232,10 @@ class DashboardNonMember extends StatelessWidget {
                       context,
                       icon: Icons.sports_score,
                       title: 'Latihan',
-                      subtitle: 'Akses penuh latihan & skor',
+                      subtitle: 'Akses penuh scoring',
                       color: const Color(0xFF10B982),
                       iconColor: Colors.white,
+                      isLocked: false,
                     ),
                     _buildMenuItem(
                       context,
@@ -208,14 +244,16 @@ class DashboardNonMember extends StatelessWidget {
                       subtitle: 'Kelola data diri & foto',
                       color: const Color(0xFF6366F1),
                       iconColor: Colors.white,
+                      isLocked: false,
                     ),
                     _buildMenuItem(
                       context,
                       icon: Icons.card_membership_outlined,
-                      title: 'Pengajuan KTA',
-                      subtitle: 'Daftar anggota resmi',
+                      title: _isMember ? 'KTA' : 'Pengajuan KTA',
+                      subtitle: _isMember ? 'Kartu anggota' : 'Daftar anggota resmi',
                       color: const Color(0xFFF59E0B),
                       iconColor: Colors.white,
+                      isLocked: false,
                     ),
                     _buildMenuItem(
                       context,
@@ -224,6 +262,44 @@ class DashboardNonMember extends StatelessWidget {
                       subtitle: 'Pantau progress latihan',
                       color: const Color(0xFF3B82F6),
                       iconColor: Colors.white,
+                      isLocked: false,
+                    ),
+                    // Member-only features (locked for non-members)
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.notifications_outlined,
+                      title: 'Notifikasi',
+                      subtitle: 'Event & pengumuman',
+                      color: const Color(0xFFEC4899),
+                      iconColor: Colors.white,
+                      isLocked: !_isMember,
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.emoji_events_outlined,
+                      title: 'Lomba',
+                      subtitle: 'Pendaftaran lomba',
+                      color: const Color(0xFF8B5CF6),
+                      iconColor: Colors.white,
+                      isLocked: !_isMember,
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.payment_outlined,
+                      title: 'Pembayaran',
+                      subtitle: 'Iuran & transaksi',
+                      color: const Color(0xFF14B8A6),
+                      iconColor: Colors.white,
+                      isLocked: !_isMember,
+                    ),
+                    _buildMenuItem(
+                      context,
+                      icon: Icons.how_to_reg_outlined,
+                      title: 'Absensi',
+                      subtitle: 'Presensi latihan',
+                      color: const Color(0xFFF97316),
+                      iconColor: Colors.white,
+                      isLocked: !_isMember,
                     ),
                   ],
                 ),
@@ -271,8 +347,8 @@ class DashboardNonMember extends StatelessWidget {
             case 1: // Latihan - Mulai training baru
               destination = const SetupTrainingScreen();
               break;
-            case 2: // Pengajuan KTA
-              destination = const UploadKtaScreen();
+            case 2: // KTA - Show card if member, upload if not
+              destination = _isMember ? const KtaCardScreen() : const UploadKtaScreen();
               break;
             case 3: // Riwayat Latihan - Lihat history
               destination = const ArcherScoringScreen();
@@ -300,9 +376,21 @@ class DashboardNonMember extends StatelessWidget {
     required String subtitle,
     required Color color,
     required Color iconColor,
+    required bool isLocked,
   }) {
     return GestureDetector(
       onTap: () {
+        if (isLocked) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Fitur ini hanya tersedia untuk anggota. Silakan ajukan KTA terlebih dahulu.'),
+              backgroundColor: Color(0xFFF59E0B),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
         if (title == 'Latihan') {
           Navigator.push(
             context,
@@ -312,6 +400,11 @@ class DashboardNonMember extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ProfileScreen()),
+          );
+        } else if (title == 'KTA') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const KtaCardScreen()),
           );
         } else if (title == 'Pengajuan KTA') {
           Navigator.push(
@@ -323,6 +416,11 @@ class DashboardNonMember extends StatelessWidget {
             context,
             MaterialPageRoute(builder: (context) => const ArcherScoringScreen()),
           );
+        } else if (title == 'Pembayaran') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PembayaranScreen()),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -333,55 +431,87 @@ class DashboardNonMember extends StatelessWidget {
           );
         }
       },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
+      child: Stack(
+        children: [
+          SizedBox(
+            height: double.infinity,
+            width: double.infinity,
+            child: Container(
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: color,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Icon(
-                icon,
-                size: 32,
-                color: iconColor,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isLocked ? const Color(0xFF9CA3AF) : color,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 32,
+                      color: iconColor,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: isLocked ? const Color(0xFF9CA3AF) : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isLocked ? const Color(0xFFD1D5DB) : const Color(0xFF6B7280),
+                      height: 1.2,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+          ),
+          // Lock overlay
+          if (isLocked)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF59E0B),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.lock,
+                  size: 16,
+                  color: Colors.white,
+                ),
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 11,
-                color: Color(0xFF6B7280),
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }

@@ -16,6 +16,14 @@ class UserData {
   String tanggalLahir = '';
   String kategori = '';
   String password = '';
+  
+  // Membership fields
+  bool isMember = false;
+  String ktaStatus = 'none'; // none, pending, approved, rejected
+  String membershipNumber = '';
+  String membershipValidFrom = '';
+  String membershipValidUntil = '';
+  String ktaImagePath = ''; // Path to uploaded KTA image
 
   // Load data from SharedPreferences
   Future<void> loadData() async {
@@ -27,6 +35,12 @@ class UserData {
     tanggalLahir = prefs.getString('tanggalLahir') ?? '';
     kategori = prefs.getString('kategori') ?? '';
     password = prefs.getString('password') ?? '';
+    isMember = prefs.getBool('isMember') ?? false;
+    ktaStatus = prefs.getString('ktaStatus') ?? 'none';
+    membershipNumber = prefs.getString('membershipNumber') ?? '';
+    membershipValidFrom = prefs.getString('membershipValidFrom') ?? '';
+    membershipValidUntil = prefs.getString('membershipValidUntil') ?? '';
+    ktaImagePath = prefs.getString('ktaImagePath') ?? '';
   }
 
   // Save data to SharedPreferences
@@ -39,6 +53,12 @@ class UserData {
     await prefs.setString('tanggalLahir', tanggalLahir);
     await prefs.setString('kategori', kategori);
     await prefs.setString('password', password);
+    await prefs.setBool('isMember', isMember);
+    await prefs.setString('ktaStatus', ktaStatus);
+    await prefs.setString('membershipNumber', membershipNumber);
+    await prefs.setString('membershipValidFrom', membershipValidFrom);
+    await prefs.setString('membershipValidUntil', membershipValidUntil);
+    await prefs.setString('ktaImagePath', ktaImagePath);
   }
 
   // Calculate kategori based on tanggal lahir

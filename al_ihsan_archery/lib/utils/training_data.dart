@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+
 class TrainingSession {
   String id;
   DateTime date;
@@ -54,6 +57,39 @@ class TrainingSession {
     }
     return true;
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'date': date.toIso8601String(),
+      'numberOfPlayers': numberOfPlayers,
+      'playerNames': playerNames,
+      'numberOfRounds': numberOfRounds,
+      'arrowsPerRound': arrowsPerRound,
+      'targetType': targetType,
+      'scores': scores,
+    };
+  }
+
+  factory TrainingSession.fromJson(Map<String, dynamic> json) {
+    return TrainingSession(
+      id: json['id'],
+      date: DateTime.parse(json['date']),
+      numberOfPlayers: json['numberOfPlayers'],
+      playerNames: List<String>.from(json['playerNames']),
+      numberOfRounds: json['numberOfRounds'],
+      arrowsPerRound: json['arrowsPerRound'],
+      targetType: json['targetType'],
+      scores: Map<String, List<List<String>>>.from(
+        (json['scores'] as Map).map(
+          (key, value) => MapEntry(
+            key.toString(),
+            (value as List).map((round) => List<String>.from(round)).toList(),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class TrainingData {
@@ -68,15 +104,37 @@ class TrainingData {
   List<TrainingSession> sessions = [];
   TrainingSession? currentSession;
 
-  void addSession(TrainingSession session) {
-    sessions.add(session);
+  Future<void> loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionsJson = prefs.getString('training_sessions');
+    if (sessionsJson != null) {
+      final List<dynamic> decoded = json.decode(sessionsJson);
+      sessions = decoded.map((json) => TrainingSession.fromJson(json)).toList();
+    }
   }
 
-  void saveCurrentSession() {
+  Future<void> saveData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final sessionsJson = json.encode(sessions.map((s) => s.toJson()).toList());
+    await prefs.setString('training_sessions', sessionsJson);
+  }
+
+  void addSession(TrainingSession session) {
+    sessions.add(session);
+    saveData();
+  }
+
+  Future<void> saveCurrentSession() async {
     if (currentSession != null && currentSession!.isComplete()) {
       addSession(currentSession!);
       currentSession = null;
+      await saveData();
     }
+  }
+
+  Future<void> removeSession(TrainingSession session) async {
+    sessions.remove(session);
+    await saveData();
   }
 
   List<TrainingSession> getCompletedSessions() {

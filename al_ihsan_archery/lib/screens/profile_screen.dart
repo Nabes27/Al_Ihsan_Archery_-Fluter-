@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'upload_kta_screen.dart';
+import 'kta_card_screen.dart';
 import 'dashboard_non_member.dart';
 import 'archer_scoring_screen.dart';
 import 'setup_training_screen.dart';
@@ -28,6 +29,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isChangingPassword = false;
   bool _obscurePasswordLama = true;
   bool _obscurePasswordBaru = true;
+  bool _isMember = false;
 
   @override
   void initState() {
@@ -46,6 +48,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _noTeleponController = TextEditingController(text: userData.nomorTelepon);
       _tanggalLahirController = TextEditingController(text: userData.tanggalLahir);
       _kategoriController = TextEditingController(text: userData.kategori);
+      _isMember = userData.isMember;
     });
   }
 
@@ -484,14 +487,124 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            // Pengajuan KTA Button
+            // Demo: Member Toggle Switch
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFFF59E0B),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(
+                          Icons.science,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Mode Demo',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF92400E),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _isMember ? 'Status: Member' : 'Status: Non-Member',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF92400E),
+                          ),
+                        ),
+                      ),
+                      Switch(
+                        value: _isMember,
+                        onChanged: (value) async {
+                          setState(() {
+                            _isMember = value;
+                          });
+                          final userData = UserData();
+                          userData.isMember = value;
+                          if (value) {
+                            // Auto-generate membership when toggled to member
+                            userData.ktaStatus = 'approved';
+                            final now = DateTime.now();
+                            final random = now.millisecondsSinceEpoch % 10000;
+                            userData.membershipNumber = 'AIA-${now.year}-${random.toString().padLeft(4, '0')}';
+                            userData.membershipValidFrom = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+                            final validUntil = DateTime(now.year + 2, now.month, now.day);
+                            userData.membershipValidUntil = '${validUntil.day.toString().padLeft(2, '0')}/${validUntil.month.toString().padLeft(2, '0')}/${validUntil.year}';
+                          } else {
+                            userData.ktaStatus = 'none';
+                            userData.membershipNumber = '';
+                            userData.membershipValidFrom = '';
+                            userData.membershipValidUntil = '';
+                          }
+                          await userData.saveData();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  _isMember
+                                      ? 'Mode Member diaktifkan'
+                                      : 'Mode Non-Member diaktifkan',
+                                ),
+                                backgroundColor: const Color(0xFF10B982),
+                                duration: const Duration(seconds: 1),
+                              ),
+                            );
+                          }
+                        },
+                        activeColor: const Color(0xFF10B982),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Toggle untuk beralih antara mode Member dan Non-Member',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFFA16207),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            // KTA Button (dynamic based on member status)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 24),
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const UploadKtaScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => _isMember
+                          ? const KtaCardScreen()
+                          : const UploadKtaScreen(),
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -501,13 +614,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Pengajuan KTA',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _isMember ? Icons.card_membership : Icons.upload_file,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isMember ? 'Lihat KTA' : 'Pengajuan KTA',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -646,8 +769,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           case 1: // Latihan - Mulai training baru
             destination = const SetupTrainingScreen();
             break;
-          case 2: // Pengajuan KTA
-            destination = const UploadKtaScreen();
+          case 2: // KTA - Show card if member, upload if not
+            destination = _isMember ? const KtaCardScreen() : const UploadKtaScreen();
             break;
           case 3: // Riwayat Latihan - Lihat history
             destination = const ArcherScoringScreen();

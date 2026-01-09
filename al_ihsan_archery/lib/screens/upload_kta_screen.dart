@@ -4,6 +4,9 @@ import 'profile_screen.dart';
 import 'dashboard_non_member.dart';
 import 'archer_scoring_screen.dart';
 import 'setup_training_screen.dart';
+import '../utils/user_data.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class UploadKtaScreen extends StatefulWidget {
   const UploadKtaScreen({super.key});
@@ -23,20 +26,43 @@ class _UploadKtaScreenState extends State<UploadKtaScreen> {
     super.dispose();
   }
 
-  void _pickKtaImage() {
-    // TODO: Implement image picker
-    setState(() {
-      _uploadedKtaImage = 'placeholder'; // Placeholder for now
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Fitur upload gambar akan segera hadir!'),
-        backgroundColor: Color(0xFF10B982),
-      ),
-    );
+  void _pickKtaImage() async {
+    try {
+      final ImagePicker picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        setState(() {
+          _uploadedKtaImage = image.path;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Foto KTA berhasil dipilih!'),
+              backgroundColor: Color(0xFF10B982),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memilih gambar: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
-  void _submitKta() {
+  void _submitKta() async {
     if (_formKey.currentState!.validate()) {
       if (_uploadedKtaImage == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -48,11 +74,19 @@ class _UploadKtaScreenState extends State<UploadKtaScreen> {
         return;
       }
 
+      // Update KTA status to pending and save image path
+      final userData = UserData();
+      userData.ktaStatus = 'pending';
+      userData.ktaImagePath = _uploadedKtaImage!;
+      await userData.saveData();
+
       // Navigate to verification status screen
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const VerificationStatusScreen()),
-      );
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const VerificationStatusScreen()),
+        );
+      }
     }
   }
 
@@ -128,22 +162,22 @@ class _UploadKtaScreenState extends State<UploadKtaScreen> {
                           child: _uploadedKtaImage == null
                               ? Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
+                                  children: const [
                                     Icon(
                                       Icons.cloud_upload_outlined,
                                       size: 48,
-                                      color: const Color(0xFF10B982),
+                                      color: Color(0xFF10B982),
                                     ),
-                                    const SizedBox(height: 12),
-                                    const Text(
+                                    SizedBox(height: 12),
+                                    Text(
                                       'Tap untuk upload KTA',
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: Color(0xFF6B7280),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    const Text(
+                                    SizedBox(height: 4),
+                                    Text(
                                       'Format: JPG, PNG (Max 5MB)',
                                       style: TextStyle(
                                         fontSize: 12,
@@ -154,25 +188,42 @@ class _UploadKtaScreenState extends State<UploadKtaScreen> {
                                 )
                               : Stack(
                                   children: [
-                                    Center(
-                                      child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: const [
-                                          Icon(
-                                            Icons.check_circle,
-                                            size: 48,
-                                            color: Color(0xFF10B982),
-                                          ),
-                                          SizedBox(height: 8),
-                                          Text(
-                                            'KTA berhasil diupload',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Color(0xFF10B982),
-                                              fontWeight: FontWeight.w600,
+                                    // Show actual image preview
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: Image.file(
+                                        File(_uploadedKtaImage!),
+                                        width: double.infinity,
+                                        height: 150,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    // Overlay with semi-transparent success indicator
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(10),
+                                        color: Colors.black.withOpacity(0.3),
+                                      ),
+                                      child: const Center(
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle,
+                                              size: 48,
+                                              color: Colors.white,
                                             ),
-                                          ),
-                                        ],
+                                            SizedBox(height: 8),
+                                            Text(
+                                              'KTA berhasil dipilih',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
                                     ),
                                     Positioned(
